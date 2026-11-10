@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from typing import Any
@@ -23,9 +24,15 @@ class Event:
     type: str
     turn: int = 0
     data: dict[str, Any] = field(default_factory=dict)
+    timestamp: float = field(default_factory=time.time)
 
     def to_dict(self) -> dict[str, Any]:
-        return {"type": self.type, "turn": self.turn, "data": dict(self.data)}
+        return {
+            "type": self.type,
+            "turn": self.turn,
+            "data": dict(self.data),
+            "timestamp": self.timestamp,
+        }
 
 
 class EventLog:

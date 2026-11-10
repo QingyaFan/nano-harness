@@ -202,6 +202,7 @@ class HarnessLoop:
                 MODEL_RESPONSE, turns,
                 content=response.content,
                 tool_calls=[call.name for call in response.tool_calls],
+                usage=response.usage.to_dict(),
             )
             assistant_message = Message.assistant(
                 response.content, response.tool_calls
@@ -264,6 +265,9 @@ class HarnessLoop:
                         TOOL_RESULT, turns,
                         call_id=call.id, ok=outcome.ok,
                         attempts=outcome.attempts, replayed=outcome.replayed,
+                        error_kind=(
+                            outcome.error.kind.value if outcome.error else None
+                        ),
                     )
 
                 if repeats >= self._config.no_progress_limit:
@@ -335,6 +339,7 @@ class HarnessLoop:
             RUN_FINISHED, turns,
             stop_reason=stop_reason.value, reason=reason,
             tool_calls=tool_calls, tool_attempts=tool_attempts,
+            usage=usage.to_dict(),
         )
         return RunResult(
             run_id=run_id,

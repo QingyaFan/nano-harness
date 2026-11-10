@@ -31,6 +31,12 @@ class Usage:
             self.completion_tokens + other.completion_tokens,
         )
 
+    def to_dict(self) -> dict[str, int]:
+        return {
+            "prompt_tokens": self.prompt_tokens,
+            "completion_tokens": self.completion_tokens,
+        }
+
 
 @dataclass(frozen=True)
 class Message:

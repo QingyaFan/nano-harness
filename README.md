@@ -16,7 +16,7 @@
 | I5 | [权限与沙箱：让否决改变控制流](https://github.com/QingyaFan/blog/issues/264) | `src/nano_harness/policy/` | 已实现 |
 | I6 | [技能：让上下文只为用到的那一层付费](https://github.com/QingyaFan/blog/issues/265) | `src/nano_harness/skills.py` | 已实现 |
 
-I1–I6 的实现已落地，配套 50 个测试；每个模块只依赖前序模块，接口在对应文章中展开。
+I1–I7 的实现已落地（I7 文章待发布），配套 61 个测试；每个模块只依赖前序模块，接口在对应文章中展开。
 
 ## 环境
 
@@ -43,6 +43,8 @@ src/nano_harness/
   lifecycle.py    I4 状态机、检查点、SSE
   policy/         I5 策略、审批、工作区、沙箱、凭证
   skills.py       I6 技能解析、索引、两级加载
+  observability.py I7 事件 → span、指标、transcript
+  eval.py         I7 fixture 评测、pass^k、回归门
 tests/
 examples/
 ```
@@ -51,11 +53,12 @@ examples/
 
 ```bash
 python examples/full_stack.py
+python examples/eval_suite.py
 ```
 
 ## 状态
 
-I1–I6 已实现，50 个测试覆盖循环、工具事务、上下文压缩、生命周期、权限沙箱和技能加载。
+I1–I7 已实现，61 个测试覆盖循环、工具事务、上下文压缩、生命周期、权限沙箱、技能加载与观测评测。
 
 ## License
 
