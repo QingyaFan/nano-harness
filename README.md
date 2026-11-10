@@ -9,14 +9,14 @@
 
 | 编号 | 文章 | 模块 | 状态 |
 | --- | --- | --- | --- |
-| I1 | [最小循环：让 Agent 跑起来](https://github.com/QingyaFan/blog/issues/260) | `src/nano_harness/loop.py` | 骨架 |
-| I2 | [工具事务：让失败可归因、可重试](https://github.com/QingyaFan/blog/issues/261) | `src/nano_harness/tools.py` | 骨架 |
-| I3 | [上下文预算：让该看的留下，丢掉的留痕](https://github.com/QingyaFan/blog/issues/262) | `src/nano_harness/context.py` | 骨架 |
-| I4 | [生命周期：让中断的运行有交代、能接续](https://github.com/QingyaFan/blog/issues/263) | `src/nano_harness/lifecycle.py` | 骨架 |
-| I5 | [权限与沙箱：让否决改变控制流](https://github.com/QingyaFan/blog/issues/264) | `src/nano_harness/permissions.py` | 骨架 |
-| I6 | [技能：让上下文只为用到的那一层付费](https://github.com/QingyaFan/blog/issues/265) | `src/nano_harness/skills.py` | 骨架 |
+| I1 | [最小循环：让 Agent 跑起来](https://github.com/QingyaFan/blog/issues/260) | `src/harness/loop.py` | 已实现 |
+| I2 | [工具事务：让失败可归因、可重试](https://github.com/QingyaFan/blog/issues/261) | `src/harness/tools.py` | 已实现 |
+| I3 | [上下文预算：让该看的留下，丢掉的留痕](https://github.com/QingyaFan/blog/issues/262) | `src/harness/context.py` | 已实现 |
+| I4 | [生命周期：让中断的运行有交代、能接续](https://github.com/QingyaFan/blog/issues/263) | `src/harness/lifecycle.py` | 已实现 |
+| I5 | [权限与沙箱：让否决改变控制流](https://github.com/QingyaFan/blog/issues/264) | `src/harness/permissions.py` | 已实现 |
+| I6 | [技能：让上下文只为用到的那一层付费](https://github.com/QingyaFan/blog/issues/265) | `src/harness/skills.py` | 已实现 |
 
-实现随系列文章逐篇补充；每个模块只依赖前序模块，接口在对应文章中展开。
+I1–I6 的实现已落地，配套 50 个测试；每个模块只依赖前序模块，接口在对应文章中展开。
 
 ## 环境
 
@@ -33,19 +33,29 @@ pytest
 ## 结构
 
 ```text
-src/nano_harness/
+src/harness/
+  messages.py     消息与工具调用
+  events.py       事件流
+  model.py        Model 协议与 ScriptedModel
   loop.py         I1 最小循环
-  tools.py        I2 工具事务
-  context.py      I3 上下文预算
-  lifecycle.py    I4 生命周期
-  permissions.py  I5 权限与沙箱
-  skills.py       I6 技能
+  tools/          I2 工具规格、错误信封、执行器
+  context.py      I3 token 计量、压缩级联、artifact
+  lifecycle.py    I4 状态机、检查点、SSE
+  policy/         I5 策略、审批、工作区、沙箱、凭证
+  skills.py       I6 技能解析、索引、两级加载
 tests/
+examples/
+```
+
+运行示例：
+
+```bash
+python examples/full_stack.py
 ```
 
 ## 状态
 
-骨架阶段：模块与测试入口已就位，实现随文章发布补齐。
+I1–I6 已实现，50 个测试覆盖循环、工具事务、上下文压缩、生命周期、权限沙箱和技能加载。
 
 ## License
 
