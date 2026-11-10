@@ -2,15 +2,15 @@ import json
 
 import pytest
 
-from harness.lifecycle import (
+from nano_harness.lifecycle import (
     CheckpointStore,
     LifecycleLoop,
     RunStatus,
     ToolSuspended,
 )
-from harness.messages import ToolCall
-from harness.model import ModelResponse, ScriptedModel
-from harness.policy import (
+from nano_harness.messages import ToolCall
+from nano_harness.model import ModelResponse, ScriptedModel
+from nano_harness.policy import (
     CredentialBroker,
     CredentialDenied,
     Decision,
@@ -26,7 +26,7 @@ from harness.policy import (
     redact_value,
     workspace_tools,
 )
-from harness.tools import ToolExecutor, ToolSpec, current_tool_context
+from nano_harness.tools import ToolExecutor, ToolSpec, current_tool_context
 
 
 def empty_schema() -> dict:

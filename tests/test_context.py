@@ -1,6 +1,6 @@
 import pytest
 
-from harness.context import (
+from nano_harness.context import (
     ContextBudget,
     ContextManager,
     TokenMeter,
@@ -10,7 +10,7 @@ from harness.context import (
     resolve_window,
     truncate_to_tokens,
 )
-from harness.messages import Message, ToolCall
+from nano_harness.messages import Message, ToolCall
 
 
 def budget(size: int = 200) -> ContextBudget:

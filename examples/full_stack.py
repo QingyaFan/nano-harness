@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import tempfile
 
-from harness.context import ContextBudget, ContextManager, WindowInfo
-from harness.loop import HarnessLoop, RunConfig
-from harness.messages import ToolCall
-from harness.model import ModelResponse, ScriptedModel
-from harness.policy import (
+from nano_harness.context import ContextBudget, ContextManager, WindowInfo
+from nano_harness.loop import HarnessLoop, RunConfig
+from nano_harness.messages import ToolCall
+from nano_harness.model import ModelResponse, ScriptedModel
+from nano_harness.policy import (
     Decision,
     PermissionGate,
     PermissionPolicy,
@@ -17,7 +17,7 @@ from harness.policy import (
     Workspace,
     workspace_tools,
 )
-from harness.tools import ToolExecutor
+from nano_harness.tools import ToolExecutor
 
 
 def main() -> None:

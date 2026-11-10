@@ -1,9 +1,9 @@
-import harness
-from harness.loop import StopReason
+import nano_harness
+from nano_harness.loop import StopReason
 
 
 def test_version() -> None:
-    assert harness.__version__ == "0.1.0"
+    assert nano_harness.__version__ == "0.1.0"
 
 
 def test_stop_reason_values() -> None:

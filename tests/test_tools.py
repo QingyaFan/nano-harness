@@ -2,9 +2,9 @@ import json
 
 import pytest
 
-from harness.messages import ToolCall
-from harness.policy.types import RiskLevel
-from harness.tools import (
+from nano_harness.messages import ToolCall
+from nano_harness.policy.types import RiskLevel
+from nano_harness.tools import (
     RetryableToolError,
     ToolExecutor,
     ToolSpec,

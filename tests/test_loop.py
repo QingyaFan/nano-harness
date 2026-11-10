@@ -1,15 +1,15 @@
 import pytest
 
-from harness.loop import (
+from nano_harness.loop import (
     GateDecision,
     HarnessLoop,
     RunConfig,
     StopReason,
     require_answer,
 )
-from harness.messages import Message, ToolCall
-from harness.model import ModelResponse, ScriptedModel
-from harness.tools import RetryableToolError, ToolExecutor, ToolSpec
+from nano_harness.messages import Message, ToolCall
+from nano_harness.model import ModelResponse, ScriptedModel
+from nano_harness.tools import RetryableToolError, ToolExecutor, ToolSpec
 
 ECHO_SCHEMA = {
     "type": "object",

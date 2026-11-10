@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from harness.lifecycle import (
+from nano_harness.lifecycle import (
     CancelToken,
     Checkpoint,
     CheckpointError,
@@ -20,9 +20,9 @@ from harness.lifecycle import (
     stream_with_retry,
     validate_stream_end,
 )
-from harness.messages import Message, ToolCall, Usage
-from harness.model import ModelResponse, ScriptedModel
-from harness.tools import ToolExecutor, ToolSpec, ToolSuspended
+from nano_harness.messages import Message, ToolCall, Usage
+from nano_harness.model import ModelResponse, ScriptedModel
+from nano_harness.tools import ToolExecutor, ToolSpec, ToolSuspended
 
 
 def empty_schema() -> dict:

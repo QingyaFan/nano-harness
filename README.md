@@ -9,12 +9,12 @@
 
 | 编号 | 文章 | 模块 | 状态 |
 | --- | --- | --- | --- |
-| I1 | [最小循环：让 Agent 跑起来](https://github.com/QingyaFan/blog/issues/260) | `src/harness/loop.py` | 已实现 |
-| I2 | [工具事务：让失败可归因、可重试](https://github.com/QingyaFan/blog/issues/261) | `src/harness/tools.py` | 已实现 |
-| I3 | [上下文预算：让该看的留下，丢掉的留痕](https://github.com/QingyaFan/blog/issues/262) | `src/harness/context.py` | 已实现 |
-| I4 | [生命周期：让中断的运行有交代、能接续](https://github.com/QingyaFan/blog/issues/263) | `src/harness/lifecycle.py` | 已实现 |
-| I5 | [权限与沙箱：让否决改变控制流](https://github.com/QingyaFan/blog/issues/264) | `src/harness/permissions.py` | 已实现 |
-| I6 | [技能：让上下文只为用到的那一层付费](https://github.com/QingyaFan/blog/issues/265) | `src/harness/skills.py` | 已实现 |
+| I1 | [最小循环：让 Agent 跑起来](https://github.com/QingyaFan/blog/issues/260) | `src/nano_harness/loop.py` | 已实现 |
+| I2 | [工具事务：让失败可归因、可重试](https://github.com/QingyaFan/blog/issues/261) | `src/nano_harness/tools/` | 已实现 |
+| I3 | [上下文预算：让该看的留下，丢掉的留痕](https://github.com/QingyaFan/blog/issues/262) | `src/nano_harness/context.py` | 已实现 |
+| I4 | [生命周期：让中断的运行有交代、能接续](https://github.com/QingyaFan/blog/issues/263) | `src/nano_harness/lifecycle.py` | 已实现 |
+| I5 | [权限与沙箱：让否决改变控制流](https://github.com/QingyaFan/blog/issues/264) | `src/nano_harness/policy/` | 已实现 |
+| I6 | [技能：让上下文只为用到的那一层付费](https://github.com/QingyaFan/blog/issues/265) | `src/nano_harness/skills.py` | 已实现 |
 
 I1–I6 的实现已落地，配套 50 个测试；每个模块只依赖前序模块，接口在对应文章中展开。
 
@@ -33,7 +33,7 @@ pytest
 ## 结构
 
 ```text
-src/harness/
+src/nano_harness/
   messages.py     消息与工具调用
   events.py       事件流
   model.py        Model 协议与 ScriptedModel

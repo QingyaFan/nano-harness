@@ -1,8 +1,8 @@
 import pytest
 
-from harness.context import ContextBudget, ContextManager, WindowInfo, estimate_text
-from harness.messages import Message, ToolCall
-from harness.skills import (
+from nano_harness.context import ContextBudget, ContextManager, WindowInfo, estimate_text
+from nano_harness.messages import Message, ToolCall
+from nano_harness.skills import (
     SKILL_BODY_PREFIX,
     SkillError,
     SkillLibrary,
@@ -15,7 +15,7 @@ from harness.skills import (
     read_skill_resource_tool,
     use_skill_tool,
 )
-from harness.tools import ToolExecutor
+from nano_harness.tools import ToolExecutor
 
 
 def write_skill(root, name, description, body, resources=None):
