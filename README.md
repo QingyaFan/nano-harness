@@ -15,8 +15,9 @@
 | I4 | [生命周期：让中断的运行有交代、能接续](https://github.com/QingyaFan/blog/issues/263) | `src/nano_harness/lifecycle.py` | 已实现 |
 | I5 | [权限与沙箱：让否决改变控制流](https://github.com/QingyaFan/blog/issues/264) | `src/nano_harness/policy/` | 已实现 |
 | I6 | [技能：让上下文只为用到的那一层付费](https://github.com/QingyaFan/blog/issues/265) | `src/nano_harness/skills.py` | 已实现 |
+| I7 | [观测与评测：把运行变成可复现读数](https://github.com/QingyaFan/blog/issues/266) | `src/nano_harness/observability.py` / `eval.py` | 已实现 |
 
-I1–I7 的实现已落地（I7 文章待发布），配套 61 个测试；每个模块只依赖前序模块，接口在对应文章中展开。
+I1–I7 的实现已落地，配套 61 个测试；每个模块只依赖前序模块，接口在对应文章中展开。
 
 ## 环境
 
