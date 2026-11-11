@@ -23,6 +23,9 @@ MEMORY_CONFLICT = "memory_conflict"
 MEMORY_RECALLED = "memory_recalled"
 MEMORY_FORGOTTEN = "memory_forgotten"
 MEMORY_EXPIRED = "memory_expired"
+PROMPT_ASSEMBLED = "prompt_assembled"
+PROMPT_ASSERTION_FAILED = "prompt_assertion_failed"
+PROMPT_INJECTION_SANITIZED = "prompt_injection_sanitized"
 
 
 @dataclass(frozen=True)
