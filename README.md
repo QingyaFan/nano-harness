@@ -9,15 +9,15 @@
 
 | 编号 | 文章 | 模块 | 状态 |
 | --- | --- | --- | --- |
-| I1 | [最小循环：让 Agent 跑起来](https://github.com/QingyaFan/blog/issues/260) | `src/nano_harness/loop.py` | 已实现 |
-| I2 | [工具事务：让失败可归因、可重试](https://github.com/QingyaFan/blog/issues/261) | `src/nano_harness/tools/` | 已实现 |
-| I3 | [上下文预算：让该看的留下，丢掉的留痕](https://github.com/QingyaFan/blog/issues/262) | `src/nano_harness/context.py` | 已实现 |
-| I4 | [生命周期：让中断的运行有交代、能接续](https://github.com/QingyaFan/blog/issues/263) | `src/nano_harness/lifecycle.py` | 已实现 |
-| I5 | [权限与沙箱：让否决改变控制流](https://github.com/QingyaFan/blog/issues/264) | `src/nano_harness/policy/` | 已实现 |
-| I6 | [技能：让上下文只为用到的那一层付费](https://github.com/QingyaFan/blog/issues/265) | `src/nano_harness/skills.py` | 已实现 |
-| I7 | [观测与评测：把运行变成可复现读数](https://github.com/QingyaFan/blog/issues/266) | `src/nano_harness/observability.py` / `eval.py` | 已实现 |
-| I8 | [记忆：让跨运行的事实接得上](https://github.com/QingyaFan/blog/issues/267) | `src/nano_harness/memory.py` | 已实现 |
-| I9 | [Prompt 装配：把各层拼成一次请求](https://github.com/QingyaFan/blog/issues/268) | `src/nano_harness/prompt.py` | 已实现 |
+| I1 | [最小循环：让 Agent 跑起来（I1）](https://github.com/QingyaFan/blog/issues/260) | `src/nano_harness/loop.py` | 已实现 |
+| I2 | [工具事务：让失败可归因、可重试（I2）](https://github.com/QingyaFan/blog/issues/261) | `src/nano_harness/tools/` | 已实现 |
+| I3 | [上下文预算：让该看的留下，丢掉的留痕（I3）](https://github.com/QingyaFan/blog/issues/262) | `src/nano_harness/context.py` | 已实现 |
+| I4 | [生命周期：让中断的运行有交代、能接续（I4）](https://github.com/QingyaFan/blog/issues/263) | `src/nano_harness/lifecycle.py` | 已实现 |
+| I5 | [权限与沙箱：让否决改变控制流（I5）](https://github.com/QingyaFan/blog/issues/264) | `src/nano_harness/policy/` | 已实现 |
+| I6 | [技能：让上下文只为用到的那一层付费（I6）](https://github.com/QingyaFan/blog/issues/265) | `src/nano_harness/skills.py` | 已实现 |
+| I7 | [观测与评测：把运行变成可复现读数（I7）](https://github.com/QingyaFan/blog/issues/266) | `src/nano_harness/observability.py` / `eval.py` | 已实现 |
+| I8 | [记忆：让跨运行的事实接得上（I8）](https://github.com/QingyaFan/blog/issues/267) | `src/nano_harness/memory.py` | 已实现 |
+| I9 | [Prompt 装配：把各层拼成一次请求（I9）](https://github.com/QingyaFan/blog/issues/268) | `src/nano_harness/prompt.py` | 已实现 |
 
 I1–I9 的实现已落地，配套 82 个测试；每个模块只依赖前序模块，接口在对应文章中展开。
 
