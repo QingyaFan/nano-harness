@@ -17,6 +17,12 @@ TOOL_RESULT = "tool_result"
 TOOL_RETRY = "tool_retry"
 STOP_GATE = "stop_gate"
 RUN_FINISHED = "run_finished"
+MEMORY_WRITTEN = "memory_written"
+MEMORY_DUPLICATE = "memory_duplicate"
+MEMORY_CONFLICT = "memory_conflict"
+MEMORY_RECALLED = "memory_recalled"
+MEMORY_FORGOTTEN = "memory_forgotten"
+MEMORY_EXPIRED = "memory_expired"
 
 
 @dataclass(frozen=True)
