@@ -16,8 +16,9 @@
 | I5 | [权限与沙箱：让否决改变控制流](https://github.com/QingyaFan/blog/issues/264) | `src/nano_harness/policy/` | 已实现 |
 | I6 | [技能：让上下文只为用到的那一层付费](https://github.com/QingyaFan/blog/issues/265) | `src/nano_harness/skills.py` | 已实现 |
 | I7 | [观测与评测：把运行变成可复现读数](https://github.com/QingyaFan/blog/issues/266) | `src/nano_harness/observability.py` / `eval.py` | 已实现 |
+| I8 | [记忆：让跨运行的事实接得上](https://github.com/QingyaFan/blog/issues/267) | `src/nano_harness/memory.py` | 已实现 |
 
-I1–I7 的实现已落地，配套 61 个测试；每个模块只依赖前序模块，接口在对应文章中展开。
+I1–I8 的实现已落地，配套 72 个测试；每个模块只依赖前序模块，接口在对应文章中展开。
 
 ## 环境
 
@@ -46,6 +47,7 @@ src/nano_harness/
   skills.py       I6 技能解析、索引、两级加载
   observability.py I7 事件 → span、指标、transcript
   eval.py         I7 fixture 评测、pass^k、回归门
+  memory.py       I8 记忆条目、写入/召回/遗忘、隔离
 tests/
 examples/
 ```
@@ -55,11 +57,12 @@ examples/
 ```bash
 python examples/full_stack.py
 python examples/eval_suite.py
+python examples/memory_demo.py
 ```
 
 ## 状态
 
-I1–I7 已实现，61 个测试覆盖循环、工具事务、上下文压缩、生命周期、权限沙箱、技能加载与观测评测。
+I1–I8 已实现，72 个测试覆盖循环、工具事务、上下文压缩、生命周期、权限沙箱、技能加载、观测评测与记忆读写。
 
 ## License
 
