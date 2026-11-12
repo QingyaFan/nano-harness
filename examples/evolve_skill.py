@@ -1,10 +1,11 @@
-"""Skill candidate lane: eval rejection, canary abort, and version pinning."""
+"""Skill candidate lane: eval rejection, canary abort, version pinning, and audit events."""
 
 from __future__ import annotations
 
 from dataclasses import replace
 
-from nano_harness.artifact import ArtifactKind, ArtifactRegistry
+from nano_harness.artifact import ArtifactRegistry
+from nano_harness.distill import CandidateSource, skill_candidate
 from nano_harness.eval import (
     EvalCase,
     baseline_from_result,
@@ -13,6 +14,7 @@ from nano_harness.eval import (
     run_suite,
     stop_reason,
 )
+from nano_harness.events import EventLog
 from nano_harness.evolution import (
     Approval,
     CanaryController,
@@ -79,22 +81,39 @@ def main() -> None:
     )
 
     registry = ArtifactRegistry()
+    events = EventLog()
     manager = ReleaseManager(
         registry,
         gate=EvalGate(),
         canary=CanaryController(CanaryPolicy(min_samples=10)),
+        events=events,
     )
-    v1 = registry.register(
-        "pdf-forms", ArtifactKind.SKILL, "v1", proposer="human"
+    v1 = manager.propose(
+        skill_candidate(
+            "pdf-forms",
+            "v1",
+            proposer="human",
+            source=CandidateSource("bootstrap"),
+        )
     )
     manager.promote(v1, approvers=(Approval("human-1"),))
 
-    v2 = registry.register(
-        "pdf-forms", ArtifactKind.SKILL, "v2-bad", proposer="meta-agent"
+    v2 = manager.propose(
+        skill_candidate(
+            "pdf-forms",
+            "v2-bad",
+            proposer="meta-agent",
+            source=CandidateSource("run-001", "transcript-1"),
+        )
     )
     bad_report = manager.evaluate(v2, bad_suite, baseline)
-    v3 = registry.register(
-        "pdf-forms", ArtifactKind.SKILL, "v3-good", proposer="meta-agent"
+    v3 = manager.propose(
+        skill_candidate(
+            "pdf-forms",
+            "v3-good",
+            proposer="meta-agent",
+            source=CandidateSource("run-002", "transcript-2"),
+        )
     )
     good_report = manager.evaluate(v3, baseline_suite, baseline)
     good_status = registry.get("pdf-forms", v3.version).status.value
@@ -107,10 +126,7 @@ def main() -> None:
         f"status={registry.get('pdf-forms', v2.version).status.value} "
         f"failures={list(bad_report.failures)}"
     )
-    print(
-        f"good: pass^k={good_report.pass_power_k:.3f} "
-        f"status={good_status}"
-    )
+    print(f"good: pass^k={good_report.pass_power_k:.3f} status={good_status}")
     print(
         f"canary: abort={decision.abort} reason={decision.reason} "
         f"error_rate={decision.error_rate:.2f}"
@@ -120,6 +136,7 @@ def main() -> None:
         f"in_flight=v{registry.resolve('pdf-forms', 'run-1').version} "
         f"new_run=v{registry.resolve('pdf-forms', 'run-2').version}"
     )
+    print("events:", sorted({event.type for event in events}))
 
 
 if __name__ == "__main__":

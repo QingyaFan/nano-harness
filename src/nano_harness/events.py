@@ -26,6 +26,13 @@ MEMORY_EXPIRED = "memory_expired"
 PROMPT_ASSEMBLED = "prompt_assembled"
 PROMPT_ASSERTION_FAILED = "prompt_assertion_failed"
 PROMPT_INJECTION_SANITIZED = "prompt_injection_sanitized"
+ARTIFACT_PROPOSED = "artifact_proposed"
+EVAL_PASSED = "eval_passed"
+EVAL_FAILED = "eval_failed"
+CANARY_STARTED = "canary_started"
+CANARY_ABORTED = "canary_aborted"
+PROMOTED = "promoted"
+ROLLED_BACK = "rolled_back"
 
 
 @dataclass(frozen=True)

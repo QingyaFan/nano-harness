@@ -12,6 +12,16 @@ from .artifact import (
 )
 from .distill import Candidate, risk_for
 from .eval import EvalBaseline, SuiteResult, compare_to_baseline
+from .events import (
+    ARTIFACT_PROPOSED,
+    CANARY_ABORTED,
+    CANARY_STARTED,
+    EVAL_FAILED,
+    EVAL_PASSED,
+    PROMOTED,
+    ROLLED_BACK,
+    EventLog,
+)
 from .risk import RiskLevel
 
 
@@ -149,13 +159,15 @@ class ReleaseManager:
         *,
         gate: EvalGate | None = None,
         canary: CanaryController | None = None,
+        events: EventLog | None = None,
     ) -> None:
         self._registry = registry
         self._gate = gate
         self._canary = canary
+        self._events = events
 
     def propose(self, candidate: Candidate) -> Artifact:
-        return self._registry.register(
+        artifact = self._registry.register(
             candidate.name,
             candidate.kind,
             candidate.content,
@@ -167,6 +179,14 @@ class ReleaseManager:
                 "risk": candidate.risk.value if candidate.risk else None,
             },
         )
+        self._emit(
+            ARTIFACT_PROPOSED,
+            name=artifact.name,
+            version=artifact.version,
+            kind=artifact.kind.value,
+            proposer=artifact.proposer,
+        )
+        return artifact
 
     def evaluate(
         self,
@@ -187,8 +207,23 @@ class ReleaseManager:
             self._registry.set_status(
                 artifact.name, artifact.version, ArtifactStatus.CANARY
             )
+            self._emit(
+                EVAL_PASSED,
+                name=artifact.name,
+                version=artifact.version,
+                pass_power_k=report.pass_power_k,
+                delta=report.delta,
+            )
         else:
             self._registry.reject(artifact.name, artifact.version)
+            self._emit(
+                EVAL_FAILED,
+                name=artifact.name,
+                version=artifact.version,
+                pass_power_k=report.pass_power_k,
+                delta=report.delta,
+                failures=list(report.failures),
+            )
         return report
 
     def promote(
@@ -211,7 +246,14 @@ class ReleaseManager:
                 f"{artifact.kind.value} change requires {required} approver(s), "
                 f"got {len(approved)}"
             )
-        return self._registry.promote(artifact.name, artifact.version)
+        promoted = self._registry.promote(artifact.name, artifact.version)
+        self._emit(
+            PROMOTED,
+            name=promoted.name,
+            version=promoted.version,
+            kind=promoted.kind.value,
+        )
+        return promoted
 
     def canary(
         self, artifact: Artifact, sample: CanarySample
@@ -219,6 +261,11 @@ class ReleaseManager:
         if self._canary is None:
             raise ReleaseError("no canary controller configured")
         self._canary.start(artifact)
+        self._emit(
+            CANARY_STARTED,
+            name=artifact.name,
+            version=artifact.version,
+        )
         decision = self._canary.observe(sample)
         if decision.abort:
             stable = self._registry.stable(artifact.name)
@@ -230,13 +277,36 @@ class ReleaseManager:
                 )
             else:
                 self._registry.rollback(artifact.name)
+            self._emit(
+                CANARY_ABORTED,
+                name=artifact.name,
+                version=artifact.version,
+                reason=decision.reason,
+                error_rate=decision.error_rate,
+            )
+            self._emit(
+                ROLLED_BACK,
+                name=artifact.name,
+                version=artifact.version,
+                reason=decision.reason,
+            )
         return decision
 
     def rollback(self, name: str, to_version: int | None = None) -> Artifact:
-        return self._registry.rollback(name, to_version)
+        artifact = self._registry.rollback(name, to_version)
+        self._emit(
+            ROLLED_BACK,
+            name=artifact.name,
+            version=artifact.version,
+        )
+        return artifact
 
     def pin(self, run_id: str, name: str, version: int) -> None:
         self._registry.pin(run_id, name, version)
 
     def resolve(self, name: str, run_id: str | None = None) -> Artifact:
         return self._registry.resolve(name, run_id)
+
+    def _emit(self, event_type: str, **data: object) -> None:
+        if self._events is not None:
+            self._events.emit(event_type, **data)
