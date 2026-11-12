@@ -107,8 +107,18 @@ class Checkpoint:
     pending_call: ToolCall | None = None
     suspension: Suspension | None = None
     meta: dict[str, Any] = field(default_factory=dict)
+    attempt: int = 1
+    lease_epoch: int = 0
+    schema_version: int = 1
+    tool_results: dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
+        if self.attempt < 1:
+            raise CheckpointError("attempt must be at least 1")
+        if self.lease_epoch < 0:
+            raise CheckpointError("lease_epoch must be non-negative")
+        if self.schema_version < 1:
+            raise CheckpointError("schema_version must be at least 1")
         if self.status is RunStatus.SUSPENDED:
             if self.suspension is None:
                 raise CheckpointError("suspended checkpoint requires a suspension")
@@ -144,6 +154,10 @@ class Checkpoint:
             ),
             "suspension": self.suspension.to_dict() if self.suspension else None,
             "meta": self.meta,
+            "attempt": self.attempt,
+            "lease_epoch": self.lease_epoch,
+            "schema_version": self.schema_version,
+            "tool_results": dict(self.tool_results),
         }
 
     @classmethod
@@ -161,6 +175,10 @@ class Checkpoint:
             pending_call=ToolCall(**pending) if pending else None,
             suspension=Suspension(**suspension) if suspension else None,
             meta=dict(payload.get("meta", {})),
+            attempt=int(payload.get("attempt", 1)),
+            lease_epoch=int(payload.get("lease_epoch", 0)),
+            schema_version=int(payload.get("schema_version", 1)),
+            tool_results=dict(payload.get("tool_results", {})),
         )
 
 
