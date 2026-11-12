@@ -19,8 +19,9 @@
 | I8 | [记忆：让跨运行的事实接得上（I8）](https://github.com/QingyaFan/blog/issues/267) | `src/nano_harness/memory.py` | 已实现 |
 | I9 | [Prompt 装配：把各层拼成一次请求（I9）](https://github.com/QingyaFan/blog/issues/268) | `src/nano_harness/prompt.py` | 已实现 |
 | E1 | [断点续跑实战：一次崩溃恢复的完整时间线（E1）](https://github.com/QingyaFan/blog/issues/269) | `src/nano_harness/lease.py` / `resume.py` | 已实现 |
+| E2 | [自进化：从经验沉淀到可回滚发布（E2）](https://github.com/QingyaFan/blog/issues/270) | `src/nano_harness/artifact.py` / `distill.py` / `evolution.py` | 已实现 |
 
-I1–I9 与 E1 的实现已落地，配套 90 个测试；每个模块只依赖前序模块，接口在对应文章中展开。
+I1–I9、E1 与 E2 的实现已落地，配套 98 个测试；每个模块只依赖前序模块，接口在对应文章中展开。
 
 ## 环境
 
@@ -53,6 +54,9 @@ src/nano_harness/
   prompt.py       I9 段装配、信任边界、wire 断言
   lease.py        E1 run lease 与 fencing
   resume.py       E1 账本重放与 pending 恢复
+  artifact.py     E2 产物注册表、状态流转、版本固定
+  distill.py      E2 运行轨迹 → 候选、信任与撤销
+  evolution.py    E2 评测门、金丝雀、审批、回滚
 tests/
 examples/
 ```
@@ -65,11 +69,14 @@ python examples/eval_suite.py
 python examples/memory_demo.py
 python examples/prompt_demo.py
 python examples/resume_crash.py
+python examples/evolve_memory.py
+python examples/evolve_skill.py
+python examples/evolve_policy.py
 ```
 
 ## 状态
 
-I1–I9 与 E1 已实现，90 个测试覆盖循环、工具事务、上下文压缩、生命周期、权限沙箱、技能加载、观测评测、记忆读写、Prompt 装配与断点续跑。
+I1–I9、E1 与 E2 已实现，98 个测试覆盖循环、工具事务、上下文压缩、生命周期、权限沙箱、技能加载、观测评测、记忆读写、Prompt 装配、断点续跑与产物发布。
 
 ## License
 
