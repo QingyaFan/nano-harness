@@ -1,8 +1,21 @@
-"""Optional outer-loop orchestration (A1).
+"""Optional orchestration layer (A1 scheduler, A2 graph).
 
 The package depends on the core harness; core modules never import it.
 """
 
+from .graph import (
+    ErrorPolicy,
+    Graph,
+    GraphCheckpoint,
+    GraphCheckpointStore,
+    GraphConfig,
+    GraphError,
+    GraphResult,
+    GraphStatus,
+    MergeRule,
+    NodeResult,
+    merge_state,
+)
 from .model import (
     AgentWorker,
     EventTrigger,
@@ -31,7 +44,15 @@ from .state import LoopStateStore
 
 __all__ = [
     "AgentWorker",
+    "ErrorPolicy",
     "EventTrigger",
+    "Graph",
+    "GraphCheckpoint",
+    "GraphCheckpointStore",
+    "GraphConfig",
+    "GraphError",
+    "GraphResult",
+    "GraphStatus",
     "HumanAction",
     "HumanDecision",
     "IntervalTrigger",
@@ -41,8 +62,10 @@ __all__ = [
     "LoopState",
     "LoopStateStore",
     "ManualTrigger",
+    "MergeRule",
     "NeverPause",
     "NeverStop",
+    "NodeResult",
     "PauseWhen",
     "PauseWhenContains",
     "Scheduler",
@@ -53,4 +76,5 @@ __all__ = [
     "StopDecision",
     "StopWhen",
     "StopWhenContains",
+    "merge_state",
 ]
