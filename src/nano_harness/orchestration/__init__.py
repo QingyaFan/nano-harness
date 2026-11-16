@@ -1,8 +1,33 @@
-"""Optional orchestration layer (A1 scheduler, A2 graph).
+"""Optional orchestration layer (A1 scheduler, A2 graph, A3 multi-agent).
 
 The package depends on the core harness; core modules never import it.
 """
 
+from .agents import (
+    AgentCredit,
+    AgentNode,
+    AgentRunResult,
+    DelegationRequest,
+    MultiAgentRuntime,
+    TaskNode,
+    TaskOutcome,
+    TaskResult,
+    TaskStatus,
+    TaskTree,
+)
+from .contracts import (
+    ApprovalRecord,
+    Authority,
+    CompletionContract,
+    ContractError,
+    Coverage,
+    CoverageError,
+    DelegationGrant,
+    GrantError,
+    Handoff,
+    OwnerKind,
+    TaskOwner,
+)
 from .graph import (
     ErrorPolicy,
     Graph,
@@ -43,9 +68,21 @@ from .scheduler import Scheduler
 from .state import LoopStateStore
 
 __all__ = [
+    "AgentCredit",
+    "AgentNode",
+    "AgentRunResult",
     "AgentWorker",
+    "ApprovalRecord",
+    "Authority",
+    "CompletionContract",
+    "ContractError",
+    "Coverage",
+    "CoverageError",
+    "DelegationGrant",
+    "DelegationRequest",
     "ErrorPolicy",
     "EventTrigger",
+    "GrantError",
     "Graph",
     "GraphCheckpoint",
     "GraphCheckpointStore",
@@ -53,6 +90,7 @@ __all__ = [
     "GraphError",
     "GraphResult",
     "GraphStatus",
+    "Handoff",
     "HumanAction",
     "HumanDecision",
     "IntervalTrigger",
@@ -63,9 +101,11 @@ __all__ = [
     "LoopStateStore",
     "ManualTrigger",
     "MergeRule",
+    "MultiAgentRuntime",
     "NeverPause",
     "NeverStop",
     "NodeResult",
+    "OwnerKind",
     "PauseWhen",
     "PauseWhenContains",
     "Scheduler",
@@ -76,5 +116,11 @@ __all__ = [
     "StopDecision",
     "StopWhen",
     "StopWhenContains",
+    "TaskNode",
+    "TaskOutcome",
+    "TaskOwner",
+    "TaskResult",
+    "TaskStatus",
+    "TaskTree",
     "merge_state",
 ]

@@ -31,7 +31,7 @@ A1–A3 是单 Agent core 之上的编排层，放在 `orchestration/`：它依�
 | --- | --- | --- | --- |
 | A1 | [Loop Engineering：让循环可信](https://github.com/QingyaFan/blog/issues/254) | `src/nano_harness/orchestration/scheduler.py` | 已实现 |
 | A2 | [Graph Engineering：让图可信](https://github.com/QingyaFan/blog/issues/255) | `src/nano_harness/orchestration/graph.py` | 已实现 |
-| A3 | Multi-Agent Engineering：让协作可信 | `src/nano_harness/orchestration/agents.py` | 待实现 |
+| A3 | Multi-Agent Engineering：让协作可信 | `src/nano_harness/orchestration/contracts.py` / `agents.py` | 已实现 |
 
 ## 环境
 
@@ -85,11 +85,12 @@ python examples/evolve_skill.py
 python examples/evolve_policy.py
 python examples/loop_scheduler.py
 python examples/graph_review.py
+python examples/multi_agent_incident.py
 ```
 
 ## 状态
 
-核心 I1–I9、E1 与 E2 已实现，A1 外层调度器与 A2 图执行器已落地；98 个核心测试、13 个 A1 测试、16 个 A2 测试，共 127 个测试，覆盖循环、工具事务、上下文压缩、生命周期、权限沙箱、技能加载、观测评测、记忆读写、Prompt 装配、断点续跑、产物发布、循环调度与图执行。
+核心 I1–I9、E1 与 E2 已实现，A1 外层调度器、A2 图执行器与 A3 多智能体运行时已落地；98 个核心测试、13 个 A1 测试、16 个 A2 测试、19 个 A3 测试，共 146 个测试，覆盖循环、工具事务、上下文压缩、生命周期、权限沙箱、技能加载、观测评测、记忆读写、Prompt 装配、断点续跑、产物发布、循环调度、图执行与多智能体协作。
 
 ## License
 
