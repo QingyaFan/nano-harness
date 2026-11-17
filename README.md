@@ -27,6 +27,8 @@ I1–I9、E1 与 E2 的实现已落地，配套 98 个测试；每个模块只�
 
 A1–A3 是单 Agent core 之上的编排层，放在 `orchestration/`：它依赖 core，core 不反向依赖它。跨模块边界由 `test_scheduler.py` / `test_graph.py` 的 import 检查守住。
 
+**架构约束**：`src/nano_harness/` 顶层模块即 core；core 不得 import `orchestration`，`orchestration` 只能依赖 core 的公开接口。
+
 | 编号 | 文章 | 模块 | 状态 |
 | --- | --- | --- | --- |
 | A1 | [Loop Engineering：让循环可信](https://github.com/QingyaFan/blog/issues/254) | `src/nano_harness/orchestration/scheduler.py` | 已实现 |
