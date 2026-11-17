@@ -21,8 +21,9 @@
 | E1 | [断点续跑实战：一次崩溃恢复的完整时间线（E1）](https://github.com/QingyaFan/blog/issues/269) | `src/nano_harness/lease.py` / `resume.py` | 已实现 |
 | E2 | [自进化：从经验沉淀到可回滚发布（E2）](https://github.com/QingyaFan/blog/issues/270) | `src/nano_harness/artifact.py` / `distill.py` / `evolution.py` | 已实现 |
 | E3 | [子 Agent：把上下文隔离出去（E3）](https://github.com/QingyaFan/blog/issues/272) | `examples/subagent_review.py` | 示例 |
+| E4 | [Prompt Injection：把不可信内容关进数据面（E4）](https://github.com/QingyaFan/blog/issues/273) | `examples/injection_defense.py` | 示例 |
 
-I1–I9、E1 与 E2 的实现已落地，配套 98 个测试；E3 的配套代码是 `examples/subagent_review.py`。每个模块只依赖前序模块，接口在对应文章中展开。
+I1–I9、E1 与 E2 的实现已落地，配套 98 个测试；E3 的配套代码是 `examples/subagent_review.py`，E4 的配套代码是 `examples/injection_defense.py`。每个模块只依赖前序模块，接口在对应文章中展开。
 
 ## 进阶（可选）
 
