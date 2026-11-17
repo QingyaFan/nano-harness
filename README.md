@@ -90,11 +90,12 @@ python examples/loop_scheduler.py
 python examples/graph_review.py
 python examples/multi_agent_incident.py
 python examples/subagent_review.py
+python examples/injection_defense.py
 ```
 
 ## 状态
 
-核心 I1–I9、E1 与 E2 已实现，A1 外层调度器、A2 图执行器与 A3 多智能体运行时已落地；98 个核心测试、13 个 A1 测试、16 个 A2 测试、19 个 A3 测试，共 146 个测试，覆盖循环、工具事务、上下文压缩、生命周期、权限沙箱、技能加载、观测评测、记忆读写、Prompt 装配、断点续跑、产物发布、循环调度、图执行与多智能体协作。
+核心 I1–I9、E1 与 E2 已实现，A1 外层调度器、A2 图执行器与 A3 多智能体运行时已落地，E3 提供子 agent 示例、E4 提供注入防御示例与 3 个测试；98 个核心测试、13 个 A1、16 个 A2、19 个 A3、3 个 E4，共 149 个测试，覆盖循环、工具事务、上下文压缩、生命周期、权限沙箱、技能加载、观测评测、记忆读写、Prompt 装配、断点续跑、产物发布、循环调度、图执行、多智能体协作与注入防御。
 
 ## License
 
