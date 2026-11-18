@@ -43,6 +43,10 @@ class ToolSpec:
             )
         if not isinstance(self.risk, RiskLevel):
             object.__setattr__(self, "risk", RiskLevel(self.risk))
+        if self.read_only and self.risk is not RiskLevel.READ:
+            raise ValueError(
+                f"tool {self.name!r} is read_only but declares risk {self.risk.value}"
+            )
         if not isinstance(self.credentials, tuple):
             object.__setattr__(self, "credentials", tuple(self.credentials))
         object.__setattr__(self, "_validator", Draft202012Validator(self.parameters))

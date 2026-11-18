@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import shutil
 import signal
 import subprocess
+import threading
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -25,9 +27,13 @@ class SandboxViolation(ToolViolation):
 class SandboxPolicy:
     allowed_executables: frozenset[str]
     max_arguments: int = 64
-    max_argument_bytes: int = 4096
+    max_argument_bytes: int = 8192
+    max_stdin_bytes: int = 16_384
+    max_output_bytes: int = 65_536
     timeout: float = 10.0
-    env_allowlist: tuple[str, ...] = ("PATH", "LANG", "LC_ALL")
+    env_allowlist: tuple[str, ...] = (
+        "LANG", "LC_ALL", "LC_CTYPE", "TZ", "NO_COLOR",
+    )
 
     def __post_init__(self) -> None:
         if not isinstance(self.allowed_executables, frozenset):
@@ -94,7 +100,7 @@ class SubprocessSandbox:
                 "executable_not_allowed",
                 f"executable {command[0]!r} is not in the allowlist",
             )
-        executable = shutil.which(command[0])
+        executable = shutil.which(command[0], path=os.defpath)
         if executable is None:
             raise SandboxViolation(
                 "executable_not_found", f"executable {command[0]!r} was not found"
@@ -108,37 +114,119 @@ class SubprocessSandbox:
         if not workdir.is_dir():
             raise SandboxViolation("cwd_missing", f"{cwd!r} is not a directory")
 
-        environment: dict[str, str] = {}
+        payload = stdin.encode("utf-8") if isinstance(stdin, str) else stdin
+        if payload is not None and len(payload) > self._policy.max_stdin_bytes:
+            raise SandboxViolation(
+                "stdin_too_large",
+                f"stdin exceeds {self._policy.max_stdin_bytes} bytes",
+            )
+        limit = self._policy.timeout if timeout is None else timeout
+
+        environment: dict[str, str] = {"PATH": os.defpath}
         for name in self._policy.env_allowlist:
             value = os.environ.get(name)
             if value is not None:
                 environment[name] = value
-        environment.setdefault("PATH", os.defpath)
 
         process = subprocess.Popen(
             [executable, *command[1:]],
             cwd=str(workdir),
             env=environment,
-            stdin=subprocess.PIPE if stdin is not None else subprocess.DEVNULL,
+            stdin=subprocess.PIPE if payload is not None else subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             start_new_session=True,
+            preexec_fn=self._limits(limit),  # noqa: PLW1509
         )
-        payload = stdin.encode("utf-8") if isinstance(stdin, str) else stdin
-        limit = self._policy.timeout if timeout is None else timeout
+        stdout, stderr = self._communicate(process, payload, limit)
+        return SandboxResult(
+            returncode=process.returncode,
+            stdout=stdout,
+            stderr=stderr,
+        )
+
+    def _communicate(
+        self,
+        process: subprocess.Popen[bytes],
+        payload: bytes | None,
+        limit: float,
+    ) -> tuple[str, str]:
+        captured: dict[str, tuple[bytes, bool]] = {}
+
+        def reader(name: str, stream: Any) -> None:
+            cap = self._policy.max_output_bytes
+            chunks: list[bytes] = []
+            total = 0
+            truncated = False
+            while True:
+                chunk = stream.read(8192)
+                if not chunk:
+                    break
+                if total < cap:
+                    take = chunk[: cap - total]
+                    chunks.append(take)
+                    total += len(take)
+                if total >= cap:
+                    truncated = True
+            captured[name] = (b"".join(chunks), truncated)
+
+        readers = [
+            threading.Thread(target=reader, args=("stdout", process.stdout)),
+            threading.Thread(target=reader, args=("stderr", process.stderr)),
+        ]
+        for thread in readers:
+            thread.start()
+        if payload is not None and process.stdin is not None:
+            process.stdin.write(payload)
+            process.stdin.close()
         try:
-            stdout, stderr = process.communicate(payload, timeout=limit)
+            process.wait(timeout=limit)
         except subprocess.TimeoutExpired:
             os.killpg(process.pid, signal.SIGKILL)
             process.wait()
-            raise TimeoutError(
-                f"command timed out after {limit}s"
-            ) from None
-        return SandboxResult(
-            returncode=process.returncode,
-            stdout=stdout.decode("utf-8", errors="replace"),
-            stderr=stderr.decode("utf-8", errors="replace"),
-        )
+            for thread in readers:
+                thread.join()
+            raise TimeoutError(f"command timed out after {limit}s") from None
+        for thread in readers:
+            thread.join()
+
+        results = []
+        for name in ("stdout", "stderr"):
+            data, truncated = captured.get(name, (b"", False))
+            text = data.decode("utf-8", errors="replace")
+            if truncated:
+                text += "\n[truncated]"
+            results.append(text)
+        return results[0], results[1]
+
+    def _limits(self, timeout: float) -> Any:
+        def apply() -> None:
+            try:
+                import resource
+            except ImportError:
+                return
+            limits = {
+                resource.RLIMIT_CPU: (max(1, math.ceil(timeout) + 1), None),
+                resource.RLIMIT_FSIZE: (10 * 1024 * 1024, None),
+                resource.RLIMIT_NOFILE: (64, None),
+                resource.RLIMIT_AS: (512 * 1024 * 1024, None),
+                resource.RLIMIT_CORE: (0, 0),
+            }
+            for key, (soft, hard) in limits.items():
+                try:
+                    _, current_hard = resource.getrlimit(key)
+                    upper = current_hard if hard is None else hard
+                    if current_hard != resource.RLIM_INFINITY:
+                        upper = min(upper, current_hard)
+                    lower = (
+                        soft if upper == resource.RLIM_INFINITY
+                        else min(soft, upper)
+                    )
+                    resource.setrlimit(key, (lower, upper))
+                except (ValueError, OSError):
+                    pass
+
+        return apply
 
 
 def command_tool(sandbox: SubprocessSandbox) -> ToolSpec:

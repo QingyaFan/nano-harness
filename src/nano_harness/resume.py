@@ -53,7 +53,7 @@ def resume_pending(
     leases: LeaseManager,
     lease: Lease,
     *,
-    expected_schema: int = 1,
+    expected_schema: int = 2,
 ) -> ResumeReport:
     if lease.run_id != checkpoint.run_id:
         raise LeaseConflict("lease belongs to a different run")

@@ -9,8 +9,15 @@ from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Any
 
+from ..events import (
+    CREDENTIAL_ACCESSED,
+    CREDENTIAL_DENIED,
+    REDACTION_APPLIED,
+    SANDBOX_DENIED,
+)
 from ..messages import ToolCall
 from .errors import (
+    ErrorKind,
     InvalidToolResult,
     ToolError,
     ToolFailure,
@@ -61,6 +68,7 @@ class ToolExecutor:
         gate: Any = None,
         credentials: Any = None,
         redactor: Any = None,
+        events: Any = None,
     ) -> None:
         self._specs = {spec.name: spec for spec in specs}
         self._run_id = run_id
@@ -70,12 +78,23 @@ class ToolExecutor:
         self._gate = gate
         self._credentials = credentials
         self._redactor = redactor
+        self._events = events
 
-    def resolve_approval(self, call_id: str, value: str) -> bool:
+    def bind_events(self, events: Any) -> None:
+        self._events = events
+        if self._gate is not None and hasattr(self._gate, "bind_events"):
+            self._gate.bind_events(events)
+
+    def _emit(self, event_type: str, turn: int, **data: Any) -> None:
+        if self._events is not None:
+            self._events.emit(event_type, turn, **data)
+
+    def resolve_approval(
+        self, call_id: str, value: str, *, tool: str | None = None
+    ) -> Any:
         if self._gate is not None and hasattr(self._gate, "resolve"):
-            self._gate.resolve(call_id, value)
-            return True
-        return False
+            return self._gate.resolve(call_id, value, tool=tool)
+        return None
 
     def specs(self) -> tuple[ToolSpec, ...]:
         specs = tuple(self._specs.values())
@@ -106,14 +125,14 @@ class ToolExecutor:
         if errors:
             return self._failed(argument_error(spec, errors), 0)
 
+        key = self._idempotency_key(spec, call.arguments)
+        if key is not None and key in self._completed:
+            return replay(self._completed[key])
+
         if self._gate is not None:
             blocked = self._gate.check(call, spec, call.arguments, turn=turn)
             if blocked is not None:
                 return blocked
-
-        key = self._idempotency_key(spec, call.arguments)
-        if key is not None and key in self._completed:
-            return replay(self._completed[key])
 
         max_attempts = self._max_attempts(spec)
         attempts = 0
@@ -121,13 +140,19 @@ class ToolExecutor:
             attempts += 1
             try:
                 content, redactions = self._invoke(
-                    spec, call.arguments, turn, attempts, key
+                    spec, call.arguments, turn, attempts, key, call_id=call.id
                 )
             except InvalidToolResult as exc:
                 return self._failed(invalid_result_error(exc), attempts)
             except ToolSuspended:
                 raise
             except ToolViolation as exc:
+                if exc.kind is ErrorKind.SANDBOX_VIOLATION:
+                    self._emit(
+                        SANDBOX_DENIED, turn,
+                        call_id=call.id, tool=spec.name,
+                        violation=exc.violation, detail=str(exc),
+                    )
                 return self._failed(
                     ToolError(
                         exc.kind,
@@ -162,10 +187,26 @@ class ToolExecutor:
         turn: int,
         attempt: int,
         key: str | None,
+        *,
+        call_id: str,
     ) -> tuple[str, dict[str, int]]:
         credentials = None
         if self._credentials is not None:
-            credentials = self._credentials.scope(spec.credentials)
+            def on_access(name: str) -> None:
+                self._emit(
+                    CREDENTIAL_ACCESSED, turn,
+                    call_id=call_id, tool=spec.name, name=name,
+                )
+
+            def on_denied(name: str, reason: str) -> None:
+                self._emit(
+                    CREDENTIAL_DENIED, turn,
+                    call_id=call_id, tool=spec.name, name=name, reason=reason,
+                )
+
+            credentials = self._credentials.scope(
+                spec.credentials, on_access=on_access, on_denied=on_denied
+            )
         context = ToolContext(
             run_id=self._run_id,
             turn=turn,
@@ -186,6 +227,11 @@ class ToolExecutor:
         redactions: dict[str, int] = {}
         if self._redactor is not None:
             result, redactions = self._redactor(result)
+            if redactions:
+                self._emit(
+                    REDACTION_APPLIED, turn,
+                    call_id=call_id, tool=spec.name, counts=dict(redactions),
+                )
         return result, redactions
 
     def _idempotency_key(
@@ -205,11 +251,21 @@ class ToolExecutor:
         return self._default_max_attempts
 
     def _failed(self, error: ToolError, attempts: int) -> ToolOutcome:
+        message = error.message
+        hint = error.hint
+        if self._redactor is not None:
+            message, message_counts = self._redactor(message)
+            hint, hint_counts = self._redactor(hint)
+            counts = dict(message_counts)
+            for name, count in hint_counts.items():
+                counts[name] = counts.get(name, 0) + count
+            if counts:
+                self._emit(REDACTION_APPLIED, 0, counts=counts)
         error = ToolError(
             error.kind,
-            error.message,
+            message,
             error.retryable,
-            error.hint,
+            hint,
             attempts,
             error.details,
         )

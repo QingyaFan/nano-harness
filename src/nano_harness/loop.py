@@ -145,6 +145,9 @@ class HarnessLoop:
     def run(self, task: str, *, cancel: Any = None) -> RunResult:
         run_id = self._run_id or uuid.uuid4().hex[:12]
         log = self._events or EventLog()
+        binder = getattr(self._tools, "bind_events", None)
+        if binder is not None:
+            binder(log)
         messages: list[Message] = [Message.user(task)]
         if self._context is not None:
             self._context.add(messages[0])

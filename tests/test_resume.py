@@ -58,7 +58,7 @@ def make_checkpoint(
     messages,
     *,
     tool_results=None,
-    schema_version: int = 1,
+    schema_version: int = 2,
 ) -> Checkpoint:
     checkpoint = Checkpoint(
         run_id="run-1",
@@ -180,13 +180,12 @@ def test_schema_mismatch_is_rejected(tmp_path) -> None:
     checkpoint = make_checkpoint(
         store,
         [Message.user("charge"), Message.assistant(None, (c1,))],
-        schema_version=1,
     )
     leases, _, lease = leases_for_resume(clock)
 
     with pytest.raises(SchemaMismatch):
         resume_pending(
-            checkpoint, store, make_executor(spec), leases, lease, expected_schema=2
+            checkpoint, store, make_executor(spec), leases, lease, expected_schema=3
         )
 
 

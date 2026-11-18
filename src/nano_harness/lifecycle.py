@@ -13,9 +13,11 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+from .events import EventLog
 from .loop import GateDecision, RunConfig, StopContext, StopReason, require_answer
 from .messages import Message, ToolCall, Usage
 from .model import Model
+from .policy.approval import Approval, parse_resume_value
 from .tools.errors import ToolOutcome, ToolSuspended
 
 
@@ -109,24 +111,36 @@ class Checkpoint:
     meta: dict[str, Any] = field(default_factory=dict)
     attempt: int = 1
     lease_epoch: int = 0
-    schema_version: int = 1
+    schema_version: int = 2
     tool_results: dict[str, str] = field(default_factory=dict)
+    approval: Approval | None = None
 
     def __post_init__(self) -> None:
         if self.attempt < 1:
             raise CheckpointError("attempt must be at least 1")
         if self.lease_epoch < 0:
             raise CheckpointError("lease_epoch must be non-negative")
-        if self.schema_version < 1:
-            raise CheckpointError("schema_version must be at least 1")
+        if self.schema_version < 2:
+            raise CheckpointError(
+                "v1 checkpoints are not supported; rerun the old run before upgrading"
+            )
+        if self.approval is not None:
+            if self.status is not RunStatus.RUNNING:
+                raise CheckpointError("approval is only valid on a running checkpoint")
+            if self.pending_call is None:
+                raise CheckpointError("approval requires a pending call")
         if self.status is RunStatus.SUSPENDED:
             if self.suspension is None:
                 raise CheckpointError("suspended checkpoint requires a suspension")
+            if self.approval is not None:
+                raise CheckpointError("suspended checkpoint cannot carry approval")
         else:
             if self.suspension is not None:
                 raise CheckpointError("only suspended checkpoints carry a suspension")
-            if self.pending_call is not None:
-                raise CheckpointError("only suspended checkpoints carry a pending call")
+            if self.pending_call is not None and self.approval is None:
+                raise CheckpointError(
+                    "only suspended checkpoints carry a pending call, unless approval is persisted"
+                )
         if self.suspension is not None:
             if self.suspension.kind in ("tool", "approval") and self.pending_call is None:
                 raise CheckpointError("tool suspension requires a pending call")
@@ -158,6 +172,18 @@ class Checkpoint:
             "lease_epoch": self.lease_epoch,
             "schema_version": self.schema_version,
             "tool_results": dict(self.tool_results),
+            "approval": (
+                {
+                    "approved": self.approval.approved,
+                    "reason": self.approval.reason,
+                    "source": self.approval.source,
+                    "by": self.approval.by,
+                    "call_id": self.approval.call_id,
+                    "tool": self.approval.tool,
+                }
+                if self.approval is not None
+                else None
+            ),
         }
 
     @classmethod
@@ -179,6 +205,11 @@ class Checkpoint:
             lease_epoch=int(payload.get("lease_epoch", 0)),
             schema_version=int(payload.get("schema_version", 1)),
             tool_results=dict(payload.get("tool_results", {})),
+            approval=(
+                Approval(**payload["approval"])
+                if payload.get("approval") is not None
+                else None
+            ),
         )
 
 
@@ -297,6 +328,7 @@ class LifecycleLoop:
         config: RunConfig | None = None,
         store: CheckpointStore | None = None,
         run_id: str | None = None,
+        events: EventLog | None = None,
     ) -> None:
         self._model = model
         self._tools = tools
@@ -304,13 +336,20 @@ class LifecycleLoop:
         self._config = config or RunConfig()
         self._store = store
         self._run_id = run_id
+        self._events = events
         self.cancel_token = CancelToken()
+
+    def _bind_events(self) -> None:
+        binder = getattr(self._tools, "bind_events", None)
+        if binder is not None and self._events is not None:
+            binder(self._events)
 
     def cancel(self, reason: str = "cancelled") -> bool:
         return self.cancel_token.cancel(reason)
 
     def run(self, task: str, *, cancel: CancelToken | None = None) -> LifecycleResult:
         run_id = self._run_id or uuid.uuid4().hex[:12]
+        self._bind_events()
         token = cancel or self.cancel_token
         messages = [Message.user(task)]
         self._save(run_id, RunStatus.RUNNING, messages, 0, Usage())
@@ -331,6 +370,7 @@ class LifecycleLoop:
     ) -> LifecycleResult:
         if self._store is None:
             raise CheckpointError("resume requires a checkpoint store")
+        self._bind_events()
         checkpoint = self._store.load(run_id)
         if not checkpoint.status.resumable:
             raise CheckpointError(
@@ -354,10 +394,21 @@ class LifecycleLoop:
                     )
                 if suspension.kind == "approval":
                     resolver = getattr(self._tools, "resolve_approval", None)
-                    handled = (
-                        resolver(pending.id, value or "") if resolver is not None else False
+                    if resolver is not None:
+                        approval = resolver(
+                            pending.id, value or "", tool=pending.name
+                        )
+                    else:
+                        approval = None
+                    if approval is None:
+                        approval = parse_resume_value(
+                            value or "", call_id=pending.id, tool=pending.name
+                        )
+                    self._save(
+                        run_id, RunStatus.RUNNING, messages, turns, usage,
+                        pending_call=pending, approval=approval,
                     )
-                    if handled:
+                    if approval.approved:
                         try:
                             outcome = self._execute(pending, turns)
                         except ToolSuspended as exc:
@@ -372,29 +423,11 @@ class LifecycleLoop:
                             )
                         messages.append(Message.tool_result(pending, outcome.content))
                     else:
-                        approved = bool(value) and value.lower().startswith(
-                            ("approve", "allow", "yes")
-                        )
-                        if approved:
-                            try:
-                                outcome = self._execute(pending, turns)
-                            except ToolSuspended as exc:
-                                new = Suspension(exc.kind, exc.reason, exc.payload)
-                                path = self._save(
-                                    run_id, RunStatus.SUSPENDED, messages,
-                                    turns, usage, pending_call=pending, suspension=new,
-                                )
-                                return self._result(
-                                    run_id, RunStatus.SUSPENDED, None, turns,
-                                    0, 0, usage, messages, None, path,
-                                )
-                            messages.append(Message.tool_result(pending, outcome.content))
-                        else:
-                            messages.append(
-                                Message.tool_result(
-                                    pending, f"DENIED: {value or suspension.reason}"
-                                )
+                        messages.append(
+                            Message.tool_result(
+                                pending, f"DENIED: {approval.reason}"
                             )
+                        )
                 else:
                     messages.append(Message.tool_result(pending, value or ""))
             elif suspension.kind == "gate":
@@ -579,6 +612,7 @@ class LifecycleLoop:
         *,
         pending_call: ToolCall | None = None,
         suspension: Suspension | None = None,
+        approval: Approval | None = None,
     ) -> str | None:
         if self._store is None:
             return None
@@ -590,6 +624,7 @@ class LifecycleLoop:
             usage=usage,
             pending_call=pending_call,
             suspension=suspension,
+            approval=approval,
         )
         return str(self._store.save(checkpoint))
 

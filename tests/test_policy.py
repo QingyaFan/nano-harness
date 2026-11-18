@@ -2,6 +2,15 @@ import json
 
 import pytest
 
+from nano_harness.events import (
+    APPROVAL_REQUESTED,
+    APPROVAL_RESOLVED,
+    CREDENTIAL_ACCESSED,
+    POLICY_DECISION,
+    REDACTION_APPLIED,
+    SANDBOX_DENIED,
+    EventLog,
+)
 from nano_harness.lifecycle import (
     CheckpointStore,
     LifecycleLoop,
@@ -11,6 +20,7 @@ from nano_harness.lifecycle import (
 from nano_harness.messages import ToolCall
 from nano_harness.model import ModelResponse, ScriptedModel
 from nano_harness.policy import (
+    Approval,
     CredentialBroker,
     CredentialDenied,
     Decision,
@@ -22,6 +32,7 @@ from nano_harness.policy import (
     SandboxViolation,
     SubprocessSandbox,
     Workspace,
+    WorkspaceViolation,
     redact_text,
     redact_value,
     workspace_tools,
@@ -223,6 +234,62 @@ def test_redaction_patterns_and_executor() -> None:
     assert outcome.redactions == {"email": 1, "api_key": 1}
 
 
+def test_redaction_default_patterns() -> None:
+    text = (
+        "-----BEGIN RSA PRIVATE KEY-----\nMIIEow\n-----END RSA PRIVATE KEY-----\n"
+        "ghp_" + "a" * 36 + "\n"
+        "AKIAIOSFODNN7EXAMPLE\n"
+        "Authorization: Bearer abcdefgh12345678\n"
+        "call 13800138000 or +86 139-0013-8000\n"
+    )
+    redacted, counts = redact_text(text)
+
+    assert "MIIEow" not in redacted
+    assert "ghp_" not in redacted
+    assert "AKIAIOSFODNN7EXAMPLE" not in redacted
+    assert "abcdefgh12345678" not in redacted
+    assert "13800138000" not in redacted
+    assert "139-0013-8000" not in redacted
+    assert counts == {
+        "private_key": 1,
+        "github_token": 1,
+        "aws_key": 1,
+        "bearer_token": 1,
+        "cn_phone": 2,
+    }
+
+
+def test_idempotent_replay_skips_approval() -> None:
+    approvals = []
+
+    def approver(call, spec, arguments):
+        approvals.append(1)
+        return Approval(True, "ok")
+
+    executor = ToolExecutor(
+        [
+            ToolSpec(
+                "write",
+                "",
+                empty_schema(),
+                lambda: "wrote",
+                idempotent=True,
+                risk=RiskLevel.WRITE,
+            )
+        ],
+        run_id="replay",
+        gate=PermissionGate(PermissionPolicy(), approver=approver),
+    )
+
+    first = executor.execute(ToolCall("c1", "write", {}))
+    second = executor.execute(ToolCall("c2", "write", {}))
+
+    assert first.ok is True
+    assert second.ok is True
+    assert second.content == "wrote"
+    assert len(approvals) == 1
+
+
 def test_lifecycle_approval_gate(tmp_path) -> None:
     workspace = Workspace(tmp_path / "ws")
     policy = PermissionPolicy(defaults={RiskLevel.WRITE: Decision.ASK})
@@ -253,3 +320,226 @@ def test_lifecycle_approval_gate(tmp_path) -> None:
     second = loop.resume("life", "approve: ok")
     assert second.status is RunStatus.COMPLETED
     assert (workspace.root / "a.txt").read_text() == "hello"
+
+
+def test_read_only_cannot_declare_write_risk() -> None:
+    with pytest.raises(ValueError):
+        ToolSpec(
+            "bad",
+            "",
+            empty_schema(),
+            lambda: "",
+            read_only=True,
+            risk=RiskLevel.WRITE,
+        )
+
+
+def test_rule_tool_pattern_matches() -> None:
+    spec = ToolSpec("read_file", "", empty_schema(), lambda: "", read_only=True)
+    policy = PermissionPolicy(
+        rules=(PolicyRule("deny-read", "read_*", Decision.DENY),)
+    )
+
+    assert policy.decide(spec, {}).decision is Decision.DENY
+
+
+def test_approver_failure_is_fail_closed() -> None:
+    effects = []
+
+    def handler() -> str:
+        effects.append(1)
+        return "ok"
+
+    def approver(call, spec, arguments):
+        raise RuntimeError("approval service down")
+
+    log = EventLog()
+    gate = PermissionGate(
+        PermissionPolicy(), approver=approver, events=log
+    )
+    executor = ToolExecutor(
+        [ToolSpec("write", "", empty_schema(), handler, risk=RiskLevel.WRITE)],
+        run_id="fail-closed",
+        gate=gate,
+    )
+
+    outcome = executor.execute(ToolCall("c1", "write", {}), turn=1)
+
+    assert outcome.ok is False
+    assert effects == []
+    assert any(event.type == POLICY_DECISION for event in log)
+    resolved = [event for event in log if event.type == APPROVAL_RESOLVED]
+    assert resolved[-1].data["approved"] is False
+    assert resolved[-1].data["source"] == "callback"
+
+
+def test_approver_unexpected_value_is_fail_closed() -> None:
+    effects = []
+
+    def handler() -> str:
+        effects.append(1)
+        return "ok"
+
+    gate = PermissionGate(
+        PermissionPolicy(), approver=lambda call, spec, arguments: "yes"
+    )
+    executor = ToolExecutor(
+        [ToolSpec("write", "", empty_schema(), handler, risk=RiskLevel.WRITE)],
+        run_id="unexpected",
+        gate=gate,
+    )
+
+    outcome = executor.execute(ToolCall("c1", "write", {}), turn=1)
+
+    assert outcome.ok is False
+    assert effects == []
+
+
+def test_approval_request_fields_and_binding() -> None:
+    schema = {
+        "type": "object",
+        "properties": {"secret": {"type": "string"}},
+        "required": ["secret"],
+        "additionalProperties": False,
+    }
+
+    log = EventLog()
+    gate = PermissionGate(PermissionPolicy(), can_suspend=True, events=log)
+    executor = ToolExecutor(
+        [
+            ToolSpec(
+                "write",
+                "",
+                schema,
+                lambda secret: secret,
+                risk=RiskLevel.WRITE,
+            )
+        ],
+        run_id="request",
+        gate=gate,
+    )
+    call = ToolCall("c1", "write", {"secret": "s3cret"})
+
+    with pytest.raises(ToolSuspended) as suspended:
+        executor.execute(call, turn=2)
+
+    payload = suspended.value.payload
+    assert payload["call_id"] == "c1"
+    assert payload["tool"] == "write"
+    assert payload["risk"] == "write"
+    assert payload["reason"]
+    assert payload["rule"] is None
+    assert payload["arguments"] == {"secret": "s3cret"}
+    assert len(payload["arguments_digest"]) == 64
+    assert [event.type for event in log].count(APPROVAL_REQUESTED) == 1
+
+    gate.resolve("c1", "approve", tool="other")
+    with pytest.raises(ValueError):
+        executor.execute(call)
+
+
+def test_credential_and_redaction_events() -> None:
+    def peek() -> str:
+        token = current_tool_context().credentials.get("API_TOKEN")
+        return f"token={token} contact a@b.com"
+
+    log = EventLog()
+    executor = ToolExecutor(
+        [
+            ToolSpec(
+                "peek",
+                "",
+                empty_schema(),
+                peek,
+                read_only=True,
+                credentials=("API_TOKEN",),
+            )
+        ],
+        run_id="events",
+        credentials=CredentialBroker({"API_TOKEN": "s3cret"}),
+        redactor=redact_text,
+        events=log,
+    )
+
+    outcome = executor.execute(ToolCall("c1", "peek", {}))
+
+    assert outcome.ok is True
+    assert "s3cret" not in outcome.content
+    assert "a@b.com" not in outcome.content
+    types = [event.type for event in log]
+    assert CREDENTIAL_ACCESSED in types
+    assert REDACTION_APPLIED in types
+
+
+def test_sandbox_denial_event(tmp_path) -> None:
+    log = EventLog()
+    executor = ToolExecutor(
+        workspace_tools(Workspace(tmp_path / "ws")),
+        run_id="sandbox",
+        events=log,
+    )
+
+    outcome = executor.execute(
+        ToolCall("c1", "read_file", {"path": "../secret"})
+    )
+
+    assert outcome.ok is False
+    denied = [event for event in log if event.type == SANDBOX_DENIED]
+    assert denied[-1].data["violation"] == "path_escape"
+
+
+def test_workspace_limits_and_symlinks(tmp_path) -> None:
+    workspace = Workspace(
+        tmp_path / "ws", max_read_bytes=4, max_write_bytes=4
+    )
+    workspace.write_text("a.txt", "abcd")
+    assert workspace.read_text("a.txt") == "abcd"
+
+    with pytest.raises(WorkspaceViolation):
+        workspace.write_text("b.txt", "abcde")
+    with pytest.raises(WorkspaceViolation):
+        workspace.write_text("missing/b.txt", "x")
+    with pytest.raises(WorkspaceViolation):
+        workspace.write_text(".", "x")
+
+    (workspace.root / "link").symlink_to(workspace.root / "a.txt")
+    with pytest.raises(WorkspaceViolation):
+        workspace.read_text("link")
+    with pytest.raises(WorkspaceViolation):
+        workspace.delete("link")
+
+    workspace.delete("a.txt")
+    assert not (workspace.root / "a.txt").exists()
+
+
+def test_sandbox_limits_env_and_exit(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("SECRET", "leak")
+
+    short = SubprocessSandbox(
+        SandboxPolicy(
+            frozenset({"echo"}), timeout=2, max_output_bytes=10
+        ),
+        tmp_path,
+    )
+    truncated = short.run(["echo", "hello world"])
+    assert "[truncated]" in truncated.stdout
+
+    sandbox = SubprocessSandbox(
+        SandboxPolicy(
+            frozenset({"echo", "env", "false"}),
+            timeout=2,
+            env_allowlist=("LANG",),
+        ),
+        tmp_path,
+    )
+    environment = sandbox.run(["env"])
+    assert "SECRET=leak" not in environment.stdout
+    assert "PATH=" in environment.stdout
+
+    failed = sandbox.run(["false"])
+    assert failed.returncode == 1
+
+    with pytest.raises(SandboxViolation):
+        sandbox.run(["echo", "x" * 9000])
+    with pytest.raises(SandboxViolation):
+        sandbox.run(["echo", "x"], stdin="x" * 20_000)

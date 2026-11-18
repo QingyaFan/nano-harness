@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import stat
 from pathlib import Path, PurePosixPath
 
 from ..tools.errors import ToolViolation
@@ -20,9 +21,17 @@ class FileMissing(ToolViolation):
 
 
 class Workspace:
-    def __init__(self, root: str | os.PathLike[str]) -> None:
+    def __init__(
+        self,
+        root: str | os.PathLike[str],
+        *,
+        max_read_bytes: int = 1_048_576,
+        max_write_bytes: int = 1_048_576,
+    ) -> None:
         self.root = Path(root).resolve()
         self.root.mkdir(parents=True, exist_ok=True)
+        self.max_read_bytes = max_read_bytes
+        self.max_write_bytes = max_write_bytes
 
     def _candidate(self, relative: str) -> Path:
         if not relative or not relative.strip():
@@ -49,7 +58,46 @@ class Workspace:
         return resolved
 
     def read_text(self, relative: str) -> str:
-        return self._resolve(relative, must_exist=True).read_text(encoding="utf-8")
+        candidate = self._candidate(relative)
+        self._resolve(relative, must_exist=True)
+        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+        try:
+            fd = os.open(candidate, flags)
+        except OSError as exc:
+            raise WorkspaceViolation("open_failed", str(exc)) from exc
+        try:
+            info = os.fstat(fd)
+            if not stat.S_ISREG(info.st_mode):
+                raise WorkspaceViolation(
+                    "not_a_file", f"{relative!r} is not a regular file"
+                )
+            if info.st_size > self.max_read_bytes:
+                raise WorkspaceViolation(
+                    "file_too_large",
+                    f"{relative!r} exceeds {self.max_read_bytes} bytes",
+                )
+            data = os.read(fd, self.max_read_bytes + 1)
+        finally:
+            os.close(fd)
+        if len(data) > self.max_read_bytes:
+            raise WorkspaceViolation(
+                "file_too_large",
+                f"{relative!r} exceeds {self.max_read_bytes} bytes",
+            )
+        return data.decode("utf-8")
+
+    def delete(self, relative: str) -> None:
+        candidate = self._candidate(relative)
+        path = self._resolve(relative, must_exist=True)
+        if candidate.is_symlink():
+            raise WorkspaceViolation(
+                "symlink", f"{relative!r} is a symlink; delete the target explicitly"
+            )
+        if not path.is_file():
+            raise WorkspaceViolation(
+                "not_a_file", f"{relative!r} is not a regular file"
+            )
+        path.unlink()
 
     def list_dir(self, relative: str = ".") -> list[str]:
         resolved = self._resolve(relative, must_exist=True)
@@ -58,9 +106,25 @@ class Workspace:
         return sorted(item.name for item in resolved.iterdir())
 
     def write_text(self, relative: str, content: str) -> Path:
+        candidate = self._candidate(relative)
         target = self._resolve(relative, must_exist=False)
+        if candidate.is_symlink():
+            raise WorkspaceViolation(
+                "symlink", f"{relative!r} is a symlink; refusing to replace it"
+            )
+        if target == self.root:
+            raise WorkspaceViolation("root_write", "cannot write the workspace root")
+        payload = content.encode("utf-8")
+        if len(payload) > self.max_write_bytes:
+            raise WorkspaceViolation(
+                "file_too_large",
+                f"{relative!r} exceeds {self.max_write_bytes} bytes",
+            )
         parent = target.parent
-        parent.mkdir(parents=True, exist_ok=True)
+        if not parent.is_dir():
+            raise WorkspaceViolation(
+                "missing_parent", f"parent of {relative!r} does not exist"
+            )
         dir_fd = os.open(parent, os.O_RDONLY | os.O_DIRECTORY)
         temp_name = f".{target.name}.{os.getpid()}.{os.urandom(6).hex()}.tmp"
         fd = -1
@@ -92,6 +156,10 @@ def workspace_tools(workspace: Workspace) -> list[ToolSpec]:
     def write(path: str, content: str) -> str:
         workspace.write_text(path, content)
         return f"wrote {len(content)} chars to {path}"
+
+    def delete(path: str) -> str:
+        workspace.delete(path)
+        return f"deleted {path}"
 
     return [
         ToolSpec(
@@ -135,5 +203,17 @@ def workspace_tools(workspace: Workspace) -> list[ToolSpec]:
             idempotent=True,
             max_attempts=2,
             risk=RiskLevel.WRITE,
+        ),
+        ToolSpec(
+            name="delete_file",
+            description="Delete a regular file inside the workspace.",
+            parameters={
+                "type": "object",
+                "properties": {"path": {"type": "string"}},
+                "required": ["path"],
+                "additionalProperties": False,
+            },
+            handler=delete,
+            risk=RiskLevel.DESTRUCTIVE,
         ),
     ]

@@ -22,6 +22,7 @@ from nano_harness.lifecycle import (
 )
 from nano_harness.messages import Message, ToolCall, Usage
 from nano_harness.model import ModelResponse, ScriptedModel
+from nano_harness.policy import Approval, PermissionGate, PermissionPolicy, RiskLevel
 from nano_harness.tools import ToolExecutor, ToolSpec, ToolSuspended
 
 
@@ -65,6 +66,11 @@ def test_checkpoint_requires_suspension_for_suspended_status() -> None:
             pending_call=ToolCall("c1", "x"),
             suspension=Suspension("gate", "wait"),
         )
+
+
+def test_v1_checkpoint_is_rejected() -> None:
+    with pytest.raises(CheckpointError):
+        Checkpoint("r", RunStatus.RUNNING, (), schema_version=1)
 
 
 def test_missing_calls_detects_partial_batches() -> None:
@@ -205,6 +211,65 @@ def test_resume_denied_does_not_execute(tmp_path) -> None:
         m.role == "tool" and "DENIED" in (m.content or "")
         for m in second.messages
     )
+
+
+def test_running_checkpoint_carries_approval() -> None:
+    approval = Approval(
+        True, "ok", source="resume", by="host", call_id="c1", tool="write"
+    )
+    checkpoint = Checkpoint(
+        "r",
+        RunStatus.RUNNING,
+        (),
+        pending_call=ToolCall("c1", "write"),
+        approval=approval,
+    )
+
+    assert checkpoint.approval == approval
+    with pytest.raises(CheckpointError):
+        Checkpoint(
+            "r",
+            RunStatus.SUSPENDED,
+            (),
+            pending_call=ToolCall("c1", "write"),
+            suspension=Suspension("approval", "wait"),
+            approval=approval,
+        )
+
+
+def test_approval_is_persisted_before_execution(tmp_path) -> None:
+    store = CheckpointStore(tmp_path)
+    seen = []
+
+    def write() -> str:
+        seen.append(store.load("run-appr").approval)
+        return "written"
+
+    gate = PermissionGate(PermissionPolicy(), can_suspend=True)
+    executor = ToolExecutor(
+        [ToolSpec("write", "", empty_schema(), write, risk=RiskLevel.WRITE)],
+        run_id="run-appr",
+        gate=gate,
+    )
+    model = ScriptedModel(
+        [
+            ModelResponse(tool_calls=(ToolCall("c1", "write", {}),)),
+            ModelResponse(content="done"),
+        ]
+    )
+    loop = LifecycleLoop(
+        model, executor, store=store, run_id="run-appr"
+    )
+
+    first = loop.run("write")
+    assert first.status is RunStatus.SUSPENDED
+
+    second = loop.resume("run-appr", "approve: ok")
+
+    assert second.status is RunStatus.COMPLETED
+    assert len(seen) == 1
+    assert seen[0] is not None
+    assert seen[0].approved is True
 
 
 def test_sse_roundtrip() -> None:
