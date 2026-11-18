@@ -1,4 +1,4 @@
-"""Optional orchestration layer (A1 scheduler, A2 graph, A3 multi-agent).
+"""Optional orchestration layer (A1 scheduler, A2 graph, A3 multi-agent, A4 scheduling).
 
 The package depends on the core harness; core modules never import it.
 """
@@ -64,6 +64,23 @@ from .model import (
     StopWhen,
     StopWhenContains,
 )
+from .schedule import (
+    CronSchedule,
+    DstPolicy,
+    InMemoryOccurrenceStore,
+    MissedPolicy,
+    Occurrence,
+    OccurrenceRecord,
+    OccurrenceStatus,
+    OccurrenceStore,
+    OverlapPolicy,
+    RunOutcome,
+    ScheduledJob,
+    ScheduledRunner,
+    ScheduleError,
+    ScheduleParseError,
+    TickResult,
+)
 from .scheduler import Scheduler
 from .state import LoopStateStore
 
@@ -78,8 +95,10 @@ __all__ = [
     "ContractError",
     "Coverage",
     "CoverageError",
+    "CronSchedule",
     "DelegationGrant",
     "DelegationRequest",
+    "DstPolicy",
     "ErrorPolicy",
     "EventTrigger",
     "GrantError",
@@ -93,6 +112,7 @@ __all__ = [
     "Handoff",
     "HumanAction",
     "HumanDecision",
+    "InMemoryOccurrenceStore",
     "IntervalTrigger",
     "LoopBudget",
     "LoopError",
@@ -101,13 +121,24 @@ __all__ = [
     "LoopStateStore",
     "ManualTrigger",
     "MergeRule",
+    "MissedPolicy",
     "MultiAgentRuntime",
     "NeverPause",
     "NeverStop",
     "NodeResult",
+    "Occurrence",
+    "OccurrenceRecord",
+    "OccurrenceStatus",
+    "OccurrenceStore",
+    "OverlapPolicy",
     "OwnerKind",
     "PauseWhen",
     "PauseWhenContains",
+    "RunOutcome",
+    "ScheduleError",
+    "ScheduleParseError",
+    "ScheduledJob",
+    "ScheduledRunner",
     "Scheduler",
     "SchedulerResult",
     "SchedulerStatus",
@@ -122,5 +153,6 @@ __all__ = [
     "TaskResult",
     "TaskStatus",
     "TaskTree",
+    "TickResult",
     "merge_state",
 ]

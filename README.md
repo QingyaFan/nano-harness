@@ -28,7 +28,7 @@ I1–I9、E1、E2 与 E5 的实现已落地；E3 的配套代码是 `examples/su
 
 ## 进阶（可选）
 
-A1–A3 是单 Agent core 之上的编排层，放在 `orchestration/`：它依赖 core，core 不反向依赖它。跨模块边界由 `test_scheduler.py` / `test_graph.py` 的 import 检查守住。
+A1–A4 是单 Agent core 之上的编排层，放在 `orchestration/`：它依赖 core，core 不反向依赖它。跨模块边界由 `test_scheduler.py` / `test_graph.py` 的 import 检查守住。
 
 **架构约束**：`src/nano_harness/` 顶层模块即 core；core 不得 import `orchestration`，`orchestration` 只能依赖 core 的公开接口。
 
@@ -37,6 +37,7 @@ A1–A3 是单 Agent core 之上的编排层，放在 `orchestration/`：它依�
 | A1 | [Loop Engineering：让循环可信](https://github.com/QingyaFan/blog/issues/254) | `src/nano_harness/orchestration/scheduler.py` | 已实现 |
 | A2 | [Graph Engineering：让图可信](https://github.com/QingyaFan/blog/issues/255) | `src/nano_harness/orchestration/graph.py` | 已实现 |
 | A3 | [Multi-Agent Engineering：让协作可信](https://github.com/QingyaFan/blog/issues/271) | `src/nano_harness/orchestration/contracts.py` / `agents.py` | 已实现 |
+| A4 | Loop Scheduling：让定时循环可信 | `src/nano_harness/orchestration/schedule.py` | 已实现 |
 
 ## 环境
 
@@ -72,7 +73,7 @@ src/nano_harness/
   artifact.py     E2 产物注册表、状态流转、版本固定
   distill.py      E2 运行轨迹 → 候选、信任与撤销
   evolution.py    E2 评测门、金丝雀、审批、回滚
-  orchestration/  A1 外层循环、A2 图执行：节点/边/状态/锚点/checkpoint
+  orchestration/  A1 外层循环、A2 图执行、A3 多智能体、A4 定时 occurrence/claim
 tests/
 examples/
 ```
@@ -89,6 +90,7 @@ python examples/evolve_memory.py
 python examples/evolve_skill.py
 python examples/evolve_policy.py
 python examples/loop_scheduler.py
+python examples/scheduled_loop.py
 python examples/graph_review.py
 python examples/multi_agent_incident.py
 python examples/subagent_review.py
@@ -98,7 +100,7 @@ python examples/sandboxed_run.py
 
 ## 状态
 
-核心 I1–I9、E1、E2 与 E5 已实现，A1 外层调度器、A2 图执行器与 A3 多智能体运行时已落地，E3 提供子 agent 示例、E4 提供注入防御示例与 3 个测试；98 个核心测试、13 个 A1、16 个 A2、19 个 A3、3 个 E4、7 个 E5，共 156 个测试；另有 1 个容器集成测试默认跳过（设置 `NANO_HARNESS_DOCKER=1` 运行），覆盖循环、工具事务、上下文压缩、生命周期、权限沙箱、技能加载、观测评测、记忆读写、Prompt 装配、断点续跑、产物发布、循环调度、图执行、多智能体协作、注入防御与运行沙箱后端。
+核心 I1–I9、E1、E2 与 E5 已实现，A1 外层调度器、A2 图执行器、A3 多智能体运行时与 A4 定时调度已落地，E3 提供子 agent 示例、E4 提供注入防御示例与 3 个测试；98 个核心测试、13 个 A1、16 个 A2、19 个 A3、17 个 A4、3 个 E4、7 个 E5，共 173 个测试；另有 1 个容器集成测试默认跳过（设置 `NANO_HARNESS_DOCKER=1` 运行），覆盖循环、工具事务、上下文压缩、生命周期、权限沙箱、技能加载、观测评测、记忆读写、Prompt 装配、断点续跑、产物发布、循环调度、图执行、多智能体协作、定时 occurrence/claim、注入防御与运行沙箱后端。
 
 ## License
 
