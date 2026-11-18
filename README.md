@@ -37,7 +37,7 @@ A1–A4 是单 Agent core 之上的编排层，放在 `orchestration/`：它依�
 | A1 | [Loop Engineering：让循环可信](https://github.com/QingyaFan/blog/issues/254) | `src/nano_harness/orchestration/scheduler.py` | 已实现 |
 | A2 | [Graph Engineering：让图可信](https://github.com/QingyaFan/blog/issues/255) | `src/nano_harness/orchestration/graph.py` | 已实现 |
 | A3 | [Multi-Agent Engineering：让协作可信](https://github.com/QingyaFan/blog/issues/271) | `src/nano_harness/orchestration/contracts.py` / `agents.py` | 已实现 |
-| A4 | Loop Scheduling：让定时循环可信 | `src/nano_harness/orchestration/schedule.py` | 已实现 |
+| A4 | [Loop Scheduling：让定时循环可信](https://github.com/QingyaFan/blog/issues/275) | `src/nano_harness/orchestration/schedule.py` | 已实现 |
 
 ## 环境
 
