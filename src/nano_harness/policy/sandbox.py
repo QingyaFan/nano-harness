@@ -65,6 +65,7 @@ class SubprocessSandbox:
         *,
         cwd: str = ".",
         stdin: str | bytes | None = None,
+        timeout: float | None = None,
     ) -> SandboxResult:
         if isinstance(argv, (str, bytes)):
             raise SandboxViolation(
@@ -124,13 +125,14 @@ class SubprocessSandbox:
             start_new_session=True,
         )
         payload = stdin.encode("utf-8") if isinstance(stdin, str) else stdin
+        limit = self._policy.timeout if timeout is None else timeout
         try:
-            stdout, stderr = process.communicate(payload, timeout=self._policy.timeout)
+            stdout, stderr = process.communicate(payload, timeout=limit)
         except subprocess.TimeoutExpired:
             os.killpg(process.pid, signal.SIGKILL)
             process.wait()
             raise TimeoutError(
-                f"command timed out after {self._policy.timeout}s"
+                f"command timed out after {limit}s"
             ) from None
         return SandboxResult(
             returncode=process.returncode,

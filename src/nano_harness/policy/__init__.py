@@ -1,6 +1,18 @@
-"""Policy, approval, workspace, sandbox, credential, and redaction primitives (I5)."""
+"""Policy, approval, workspace, sandbox, credential, redaction, and backend primitives (I5, E5)."""
 
 from .approval import Approval, ApprovalRequest, digest_arguments, parse_resume_value
+from .backends import (
+    ContainerBackend,
+    ExecResult,
+    ProcessBackend,
+    SandboxBackend,
+    SandboxClosed,
+    SandboxHandle,
+    SandboxSpec,
+    SandboxSpecError,
+    SandboxStartError,
+    SnapshotRef,
+)
 from .credentials import CredentialBroker, CredentialDenied, ScopedCredentials
 from .policy import PermissionGate, PermissionPolicy, PolicyDecision, PolicyRule
 from .redaction import redact_text, redact_value
@@ -22,19 +34,29 @@ from .workspace import (
 __all__ = [
     "Approval",
     "ApprovalRequest",
+    "ContainerBackend",
     "CredentialBroker",
     "CredentialDenied",
     "Decision",
+    "ExecResult",
     "FileMissing",
     "PermissionGate",
     "PermissionPolicy",
     "PolicyDecision",
     "PolicyRule",
+    "ProcessBackend",
     "RiskLevel",
+    "SandboxBackend",
+    "SandboxClosed",
+    "SandboxHandle",
     "SandboxPolicy",
     "SandboxResult",
+    "SandboxSpec",
+    "SandboxSpecError",
+    "SandboxStartError",
     "SandboxViolation",
     "ScopedCredentials",
+    "SnapshotRef",
     "SubprocessSandbox",
     "Workspace",
     "WorkspaceViolation",
