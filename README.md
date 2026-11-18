@@ -22,8 +22,9 @@
 | E2 | [自进化：从经验沉淀到可回滚发布（E2）](https://github.com/QingyaFan/blog/issues/270) | `src/nano_harness/artifact.py` / `distill.py` / `evolution.py` | 已实现 |
 | E3 | [子 Agent：把上下文隔离出去（E3）](https://github.com/QingyaFan/blog/issues/272) | `examples/subagent_review.py` | 示例 |
 | E4 | [Prompt Injection：把不可信内容关进数据面（E4）](https://github.com/QingyaFan/blog/issues/273) | `examples/injection_defense.py` | 示例 |
+| E5 | [运行沙箱：把整个 Agent 关进笼子（E5）](https://github.com/QingyaFan/blog/issues/274) | `src/nano_harness/policy/backends.py` | 已实现 |
 
-I1–I9、E1 与 E2 的实现已落地，配套 98 个测试；E3 的配套代码是 `examples/subagent_review.py`，E4 的配套代码是 `examples/injection_defense.py`。每个模块只依赖前序模块，接口在对应文章中展开。
+I1–I9、E1、E2 与 E5 的实现已落地；E3 的配套代码是 `examples/subagent_review.py`，E4 的配套代码是 `examples/injection_defense.py`。每个模块只依赖前序模块，接口在对应文章中展开。
 
 ## 进阶（可选）
 
@@ -60,7 +61,7 @@ src/nano_harness/
   tools/          I2 工具规格、错误信封、执行器
   context.py      I3 token 计量、压缩级联、artifact
   lifecycle.py    I4 状态机、检查点、SSE
-  policy/         I5 策略、审批、工作区、沙箱、凭证
+  policy/         I5 策略、审批、工作区、沙箱、凭证；E5 执行后端
   skills.py       I6 技能解析、索引、两级加载
   observability.py I7 事件 → span、指标、transcript
   eval.py         I7 fixture 评测、pass^k、回归门
@@ -92,11 +93,12 @@ python examples/graph_review.py
 python examples/multi_agent_incident.py
 python examples/subagent_review.py
 python examples/injection_defense.py
+python examples/sandboxed_run.py
 ```
 
 ## 状态
 
-核心 I1–I9、E1 与 E2 已实现，A1 外层调度器、A2 图执行器与 A3 多智能体运行时已落地，E3 提供子 agent 示例、E4 提供注入防御示例与 3 个测试；98 个核心测试、13 个 A1、16 个 A2、19 个 A3、3 个 E4，共 149 个测试，覆盖循环、工具事务、上下文压缩、生命周期、权限沙箱、技能加载、观测评测、记忆读写、Prompt 装配、断点续跑、产物发布、循环调度、图执行、多智能体协作与注入防御。
+核心 I1–I9、E1、E2 与 E5 已实现，A1 外层调度器、A2 图执行器与 A3 多智能体运行时已落地，E3 提供子 agent 示例、E4 提供注入防御示例与 3 个测试；98 个核心测试、13 个 A1、16 个 A2、19 个 A3、3 个 E4、7 个 E5，共 156 个测试；另有 1 个容器集成测试默认跳过（设置 `NANO_HARNESS_DOCKER=1` 运行），覆盖循环、工具事务、上下文压缩、生命周期、权限沙箱、技能加载、观测评测、记忆读写、Prompt 装配、断点续跑、产物发布、循环调度、图执行、多智能体协作、注入防御与运行沙箱后端。
 
 ## License
 
