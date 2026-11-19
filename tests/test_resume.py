@@ -151,6 +151,33 @@ def test_crash_after_side_effect_before_checkpoint(tmp_path) -> None:
     assert len(charges) == 2
 
 
+def test_each_result_is_checkpointed_during_resume(tmp_path) -> None:
+    clock = Clock()
+    _, spec = charge_tool()
+    c1 = ToolCall("c1", "charge", {"amount": 10})
+    c2 = ToolCall("c2", "charge", {"amount": 20})
+    store = CheckpointStore(tmp_path)
+    checkpoint = make_checkpoint(
+        store,
+        [Message.user("charge twice"), Message.assistant(None, (c1, c2))],
+    )
+    leases, _, lease = leases_for_resume(clock)
+    inner = make_executor(spec)
+    seen: list[dict[str, str]] = []
+
+    class Observing:
+        def execute(self, call):
+            if call.id == "c2":
+                seen.append(dict(store.load("run-1").tool_results))
+            return inner.execute(call)
+
+    report = resume_pending(checkpoint, store, Observing(), leases, lease)
+
+    assert seen == [{"c1": "charged 10"}]
+    assert report.attempt == 2
+    assert store.load("run-1").attempt == 2
+
+
 def test_stale_lease_is_rejected(tmp_path) -> None:
     clock = Clock()
     _, spec = charge_tool()

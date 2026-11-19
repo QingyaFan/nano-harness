@@ -82,6 +82,7 @@ examples/
 
 ```bash
 python examples/full_stack.py
+python examples/lifecycle.py
 python examples/eval_suite.py
 python examples/memory_demo.py
 python examples/prompt_demo.py
@@ -101,7 +102,7 @@ python examples/sandboxed_run.py
 
 ## 状态
 
-核心 I1–I9、E1、E2 与 E5 已实现，A1 外层调度器、A2 图执行器、A3 多智能体运行时与 A4 定时调度已落地，E3 提供子 agent 示例、E4 提供注入防御示例与 3 个测试；112 个核心测试、13 个 A1、16 个 A2、19 个 A3、17 个 A4、3 个 E4、7 个 E5，共 187 个测试；另有 1 个容器集成测试默认跳过（设置 `NANO_HARNESS_DOCKER=1` 运行），覆盖循环、工具事务、上下文压缩、生命周期、权限沙箱、技能加载、观测评测、记忆读写、Prompt 装配、断点续跑、产物发布、循环调度、图执行、多智能体协作、定时 occurrence/claim、注入防御与运行沙箱后端。
+核心 I1–I9、E1、E2 与 E5 已实现，A1 外层调度器、A2 图执行器、A3 多智能体运行时与 A4 定时调度已落地，E3 提供子 agent 示例、E4 提供注入防御示例与 3 个测试；113 个核心测试、13 个 A1、16 个 A2、19 个 A3、17 个 A4、3 个 E4、7 个 E5，共 188 个测试；另有 1 个容器集成测试默认跳过（设置 `NANO_HARNESS_DOCKER=1` 运行），覆盖循环、工具事务、上下文压缩、生命周期、权限沙箱、技能加载、观测评测、记忆读写、Prompt 装配、断点续跑、产物发布、循环调度、图执行、多智能体协作、定时 occurrence/claim、注入防御与运行沙箱后端。
 
 ## License
 

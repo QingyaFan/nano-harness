@@ -86,8 +86,11 @@ def resume_pending(
 
     messages = list(checkpoint.messages)
     results = dict(checkpoint.tool_results)
+    attempt = checkpoint.attempt + 1
     replayed: list[str] = []
     executed: list[str] = []
+    updated = checkpoint
+    path = store.path(checkpoint.run_id)
     for call in pending:
         if call.id in results:
             content = results[call.id]
@@ -98,19 +101,18 @@ def resume_pending(
             results[call.id] = content
             executed.append(call.id)
         messages.append(Message.tool_result(call, content))
-
-    updated = replace(
-        checkpoint,
-        messages=tuple(messages),
-        attempt=checkpoint.attempt + 1,
-        lease_epoch=lease.epoch,
-        tool_results=results,
-    )
-    path = store.save(updated)
+        updated = replace(
+            checkpoint,
+            messages=tuple(messages),
+            attempt=attempt,
+            lease_epoch=lease.epoch,
+            tool_results=dict(results),
+        )
+        path = store.save(updated)
     return ResumeReport(
         run_id=updated.run_id,
-        attempt=updated.attempt,
-        lease_epoch=updated.lease_epoch,
+        attempt=attempt,
+        lease_epoch=lease.epoch,
         replayed=tuple(replayed),
         executed=tuple(executed),
         message_count=len(updated.messages),
