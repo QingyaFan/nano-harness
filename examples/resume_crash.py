@@ -54,6 +54,19 @@ def executor(spec: ToolSpec) -> ToolExecutor:
     return ToolExecutor([spec], run_id="run-1")
 
 
+class Observing:
+    def __init__(self, inner, store, call_id, seen) -> None:
+        self._inner = inner
+        self._store = store
+        self._call_id = call_id
+        self._seen = seen
+
+    def execute(self, call, **kwargs):
+        if call.id == self._call_id:
+            self._seen.append(sorted(self._store.load("run-1").tool_results))
+        return self._inner.execute(call, **kwargs)
+
+
 def checkpoint(store: CheckpointStore, messages, tool_results=None) -> Checkpoint:
     value = Checkpoint(
         run_id="run-1",
@@ -133,7 +146,15 @@ def main() -> None:
             ],
         )
         manager, _, fresh = leases(clock)
-        report = resume_pending(state, store, executor(spec), manager, fresh)
+        seen: list[list[str]] = []
+        report = resume_pending(
+            state,
+            store,
+            Observing(executor(spec), store, "c2", seen),
+            manager,
+            fresh,
+        )
+        print(f"mid-resume: saved={seen[0] if seen else []}")
         print(
             f"crash-window: replayed={list(report.replayed)} "
             f"executed={list(report.executed)} side_effects={len(charges)}"
